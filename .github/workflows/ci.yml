@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build:
+    name: Lint, Type-check & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload build artefact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+
+  deploy-infra:
+    name: Deploy Infrastructure (Bicep)
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: dev
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy Bicep
+        uses: azure/arm-deploy@v2
+        with:
+          subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          resourceGroupName: rg-flightdeck
+          template: infrastructure/bicep/main.bicep
+          parameters: environment=dev
+          failOnStdErr: false
+
+  deploy-containers:
+    name: Build & Push Container Images
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: dev
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: ACR Login
+        run: az acr login --name crflightdeck
+
+      - name: Build & Push Orchestrator
+        run: |
+          docker build -t crflightdeck.azurecr.io/flightdeck/orchestrator:${{ github.sha }} -f infrastructure/docker/Dockerfile.orchestrator infrastructure/functions/
+          docker push crflightdeck.azurecr.io/flightdeck/orchestrator:${{ github.sha }}
+
+      - name: Build & Push MCP Delegated
+        run: |
+          docker build -t crflightdeck.azurecr.io/flightdeck/mcp-delegated:${{ github.sha }} -f infrastructure/docker/Dockerfile.mcp-delegated infrastructure/functions/
+          docker push crflightdeck.azurecr.io/flightdeck/mcp-delegated:${{ github.sha }}
+
+      - name: Build & Push MCP Webhook
+        run: |
+          docker build -t crflightdeck.azurecr.io/flightdeck/mcp-webhook:${{ github.sha }} -f infrastructure/docker/Dockerfile.mcp-webhook infrastructure/functions/
+          docker push crflightdeck.azurecr.io/flightdeck/mcp-webhook:${{ github.sha }}
+
+      - name: Update Container App Revisions
+        run: |
+          az containerapp update -n orchestrator-dev -g rg-flightdeck --image crflightdeck.azurecr.io/flightdeck/orchestrator:${{ github.sha }}
+          az containerapp update -n mcp-delegated-dev -g rg-flightdeck --image crflightdeck.azurecr.io/flightdeck/mcp-delegated:${{ github.sha }}
+          az containerapp update -n mcp-webhook-dev -g rg-flightdeck --image crflightdeck.azurecr.io/flightdeck/mcp-webhook:${{ github.sha }}

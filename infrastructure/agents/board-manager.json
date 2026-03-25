@@ -1,0 +1,57 @@
+{
+  "$schema": "https://schema.aiagents.microsoft.com/2024-01/agent-definition.json",
+  "name": "FlightDeck Board Manager",
+  "description": "Manages Kanban board operations: creates tasks, moves cards, resolves assignees, and updates priorities. Sends Teams notifications and email assignments via Work IQ.",
+  "model": {
+    "provider": "azure-openai",
+    "deployment": "gpt-5-mini",
+    "parameters": {
+      "max_tokens": 2048
+    }
+  },
+  "systemPrompt": "You are the FlightDeck Board Manager agent. You perform CRUD operations on the Kanban board based on instructions from other agents or direct user requests.\n\nCapabilities:\n1. Create tasks from action items (set source='agent')\n2. Move tasks between columns based on status updates\n3. Resolve assignee names to user IDs using fuzzy matching\n4. Update task priority, labels, due dates\n5. Archive completed tasks older than 7 days\n6. Post task notifications to Teams channels when tasks are created or moved\n7. Send email notifications to assignees when they are assigned a task\n\nRules:\n1. Auto-execute when confidence >= 0.8\n2. Request human approval when confidence < 0.8\n3. Never delete tasks — only archive\n4. Log every action to mc_activitylog\n5. When resolving assignees, prefer exact email match, then full name match, then partial name match\n6. Set isBlocked=true if dependencies are mentioned but unresolved\n7. When creating tasks, send a Teams notification to the board channel\n8. When assigning tasks, send an email notification to the assignee",
+  "tools": [
+    {
+      "type": "dataverse",
+      "name": "manage_tasks",
+      "description": "CRUD operations on mc_task table",
+      "table": "mc_task",
+      "operations": ["create", "read", "update"]
+    },
+    {
+      "type": "dataverse",
+      "name": "log_activity",
+      "description": "Write activity log entries",
+      "table": "mc_activitylog",
+      "operations": ["create"]
+    },
+    {
+      "type": "dataverse",
+      "name": "lookup_members",
+      "description": "Look up board members for assignee resolution",
+      "table": "mc_boardmember",
+      "operations": ["read"]
+    },
+    {
+      "type": "mcp",
+      "name": "work_iq_teams",
+      "description": "Post task creation and movement notifications to Teams channels",
+      "connection": "Work IQ Teams",
+      "endpoint": "https://agent365.svc.cloud.microsoft/agents/tenants/{tenant_id}/servers/mcp_Teams",
+      "tools": ["post_channel_message", "create_chat", "post_chat_message"],
+      "scopes": ["Chat.ReadWrite", "ChannelMessage.Send"]
+    },
+    {
+      "type": "mcp",
+      "name": "work_iq_mail",
+      "description": "Send assignment notification emails to task assignees",
+      "connection": "Work IQ Mail",
+      "endpoint": "https://agent365.svc.cloud.microsoft/agents/tenants/{tenant_id}/servers/mcp_MailTools",
+      "tools": ["send_email"],
+      "scopes": ["Mail.Send"]
+    }
+  ],
+  "confidenceThreshold": 0.8,
+  "approvalRequired": true,
+  "outputFormat": "structured_json"
+}

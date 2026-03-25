@@ -1,0 +1,79 @@
+{
+  "$schema": "https://schema.aiagents.microsoft.com/2024-01/agent-definition.json",
+  "name": "FlightDeck Signal Monitor",
+  "description": "Monitors email and Teams messages for completion signals, status updates, and blockers via Work IQ MCP tools, then recommends board actions",
+  "model": {
+    "provider": "azure-openai",
+    "deployment": "gpt-5-mini",
+    "parameters": {
+      "max_tokens": 2048
+    }
+  },
+  "systemPrompt": "You are the FlightDeck Signal Monitor agent. You watch communication channels (email, Teams chats) for signals that indicate task status changes.\n\nSignal types to detect:\n1. Completion signals: 'done', 'finished', 'deployed', 'merged', 'shipped'\n2. Blocker signals: 'blocked', 'waiting on', 'depends on', 'can\\'t proceed'\n3. Progress signals: 'started', 'working on', 'halfway through', 'PR submitted'\n4. Escalation signals: 'urgent', 'critical', 'ASAP', 'SLA breach'\n\nSignal sources:\n- Work IQ Mail: search and read emails matching board task patterns\n- Work IQ Teams: monitor Teams chat messages for relevant signals\n\nFor each detected signal:\n1. Fuzzy-match the subject/context to existing board tasks\n2. Recommend an action (move_task, update_priority, set_blocked, add_comment)\n3. Include confidence score based on match quality\n4. If confidence < 0.7, flag for human review\n\nOutput format: JSON with signal_type, matched_task_id, recommended_action, confidence, source_channel, and reasoning",
+  "tools": [
+    {
+      "type": "dataverse",
+      "name": "read_tasks",
+      "description": "Read existing tasks for fuzzy matching",
+      "table": "mc_task",
+      "operations": ["read"]
+    },
+    {
+      "type": "function",
+      "name": "submit_recommendation",
+      "description": "Submit a recommended board action to the Board Manager",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "signalType": {
+            "type": "string",
+            "enum": ["completion", "blocker", "progress", "escalation"]
+          },
+          "matchedTaskId": {
+            "type": "string"
+          },
+          "recommendedAction": {
+            "type": "string",
+            "enum": ["move_task", "update_priority", "set_blocked", "add_comment"]
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "reasoning": {
+            "type": "string"
+          },
+          "sourceMessage": {
+            "type": "string"
+          },
+          "sourceChannel": {
+            "type": "string",
+            "enum": ["email", "teams_chat", "teams_channel"]
+          }
+        },
+        "required": ["signalType", "matchedTaskId", "recommendedAction", "confidence", "reasoning"]
+      }
+    },
+    {
+      "type": "mcp",
+      "name": "work_iq_mail",
+      "description": "Search and read emails for signal detection, replacing Power Automate email trigger dependency",
+      "connection": "Work IQ Mail",
+      "endpoint": "https://agent365.svc.cloud.microsoft/agents/tenants/{tenant_id}/servers/mcp_MailTools",
+      "tools": ["search_emails", "read_email"],
+      "scopes": ["Mail.Read"]
+    },
+    {
+      "type": "mcp",
+      "name": "work_iq_teams",
+      "description": "Monitor Teams chat and channel messages for task-related signals",
+      "connection": "Work IQ Teams",
+      "endpoint": "https://agent365.svc.cloud.microsoft/agents/tenants/{tenant_id}/servers/mcp_Teams",
+      "tools": ["list_chats", "get_chat_messages", "list_channel_messages"],
+      "scopes": ["Chat.Read", "ChannelMessage.Read.All"]
+    }
+  ],
+  "confidenceThreshold": 0.7,
+  "outputFormat": "structured_json"
+}

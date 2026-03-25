@@ -1,0 +1,570 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.40.2.10011",
+      "templateHash": "5828507477714106405"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region for all resources."
+      }
+    },
+    "containerRegistryName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Azure Container Registry that hosts the MCP server images."
+      }
+    },
+    "graphTenantId": {
+      "type": "string",
+      "metadata": {
+        "description": "Microsoft Entra ID (Azure AD) tenant ID used by the MCP servers for Graph API access."
+      }
+    },
+    "graphClientId": {
+      "type": "string",
+      "metadata": {
+        "description": "Application (client) ID of the Entra app registration used by the MCP servers."
+      }
+    },
+    "environment": {
+      "type": "string",
+      "defaultValue": "dev",
+      "allowedValues": [
+        "dev",
+        "staging",
+        "prod"
+      ],
+      "metadata": {
+        "description": "Deployment environment. Controls naming suffixes and default scaling."
+      }
+    },
+    "adminObjectId": {
+      "type": "string",
+      "defaultValue": "2ebb7524-6596-4f40-83e3-452c11d4298d",
+      "metadata": {
+        "description": "Object ID of the admin user for Key Vault access."
+      }
+    }
+  },
+  "variables": {
+    "suffix": "[format('-{0}', parameters('environment'))]",
+    "logAnalyticsName": "[format('log-flightdeck{0}', variables('suffix'))]",
+    "appInsightsName": "[format('appi-flightdeck{0}', variables('suffix'))]",
+    "keyVaultName": "[format('kv-flightdeck{0}', variables('suffix'))]",
+    "containerAppsEnvName": "[format('cae-flightdeck{0}', variables('suffix'))]",
+    "managedIdentityName": "[format('id-flightdeck{0}', variables('suffix'))]",
+    "mcpDelegatedAppName": "[format('mcp-delegated{0}', variables('suffix'))]",
+    "mcpWebhookAppName": "[format('mcp-webhook{0}', variables('suffix'))]",
+    "orchestratorAppName": "[format('orchestrator{0}', variables('suffix'))]",
+    "storageName": "[format('stflightdeck{0}', parameters('environment'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2023-09-01",
+      "name": "[variables('logAnalyticsName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "sku": {
+          "name": "PerGB2018"
+        },
+        "retentionInDays": 30
+      }
+    },
+    {
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2020-02-02",
+      "name": "[variables('appInsightsName')]",
+      "location": "[parameters('location')]",
+      "kind": "web",
+      "properties": {
+        "Application_Type": "web",
+        "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]",
+        "IngestionMode": "LogAnalytics",
+        "publicNetworkAccessForIngestion": "Enabled",
+        "publicNetworkAccessForQuery": "Enabled"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
+      "name": "[variables('managedIdentityName')]",
+      "location": "[parameters('location')]"
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2023-07-01",
+      "name": "[variables('keyVaultName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "sku": {
+          "family": "A",
+          "name": "standard"
+        },
+        "tenantId": "[subscription().tenantId]",
+        "enableRbacAuthorization": false,
+        "accessPolicies": [
+          {
+            "tenantId": "[subscription().tenantId]",
+            "objectId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName')), '2023-01-31').principalId]",
+            "permissions": {
+              "secrets": [
+                "get",
+                "list"
+              ]
+            }
+          },
+          {
+            "tenantId": "[subscription().tenantId]",
+            "objectId": "[parameters('adminObjectId')]",
+            "permissions": {
+              "secrets": [
+                "get",
+                "set",
+                "list",
+                "delete"
+              ]
+            }
+          }
+        ],
+        "enableSoftDelete": true,
+        "softDeleteRetentionInDays": 7
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.App/managedEnvironments",
+      "apiVersion": "2024-03-01",
+      "name": "[variables('containerAppsEnvName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "appLogsConfiguration": {
+          "destination": "log-analytics",
+          "logAnalyticsConfiguration": {
+            "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName')), '2023-09-01').customerId]",
+            "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName')), '2023-09-01').primarySharedKey]"
+          }
+        },
+        "daprAIInstrumentationKey": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').InstrumentationKey]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]",
+        "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "[variables('mcpDelegatedAppName')]",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName')))]": {}
+        }
+      },
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName'))]",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "ingress": {
+            "external": true,
+            "targetPort": 3000,
+            "transport": "http",
+            "corsPolicy": {
+              "allowedOrigins": [
+                "https://*.powerapps.com"
+              ],
+              "allowedMethods": [
+                "GET",
+                "POST",
+                "PUT",
+                "DELETE",
+                "OPTIONS"
+              ],
+              "allowedHeaders": [
+                "*"
+              ],
+              "allowCredentials": true,
+              "maxAge": 3600
+            }
+          },
+          "registries": [
+            {
+              "server": "[format('{0}.azurecr.io', parameters('containerRegistryName'))]",
+              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]"
+            }
+          ],
+          "secrets": [
+            {
+              "name": "graph-client-secret",
+              "keyVaultUrl": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', variables('keyVaultName'), 'GRAPH-CLIENT-SECRET'), '2023-07-01').secretUri]",
+              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]"
+            },
+            {
+              "name": "appinsights-connection-string",
+              "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').ConnectionString]"
+            }
+          ]
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "mcp-delegated",
+              "image": "[format('{0}.azurecr.io/flightdeck/mcp-delegated:latest', parameters('containerRegistryName'))]",
+              "resources": {
+                "cpu": "[json('0.25')]",
+                "memory": "0.5Gi"
+              },
+              "env": [
+                {
+                  "name": "PORT",
+                  "value": "3000"
+                },
+                {
+                  "name": "AZURE_TENANT_ID",
+                  "value": "[parameters('graphTenantId')]"
+                },
+                {
+                  "name": "AZURE_CLIENT_ID",
+                  "value": "[parameters('graphClientId')]"
+                },
+                {
+                  "name": "AZURE_CLIENT_SECRET",
+                  "secretRef": "graph-client-secret"
+                },
+                {
+                  "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                  "secretRef": "appinsights-connection-string"
+                }
+              ]
+            }
+          ],
+          "scale": {
+            "minReplicas": 0,
+            "maxReplicas": 3,
+            "rules": [
+              {
+                "name": "http-scaling",
+                "http": {
+                  "metadata": {
+                    "concurrentRequests": "20"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]",
+        "[resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "[variables('mcpWebhookAppName')]",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName')))]": {}
+        }
+      },
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName'))]",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "ingress": {
+            "external": true,
+            "targetPort": 3001,
+            "transport": "http",
+            "corsPolicy": {
+              "allowedOrigins": [
+                "https://*.powerapps.com"
+              ],
+              "allowedMethods": [
+                "GET",
+                "POST",
+                "PUT",
+                "DELETE",
+                "OPTIONS"
+              ],
+              "allowedHeaders": [
+                "*"
+              ],
+              "allowCredentials": true,
+              "maxAge": 3600
+            }
+          },
+          "registries": [
+            {
+              "server": "[format('{0}.azurecr.io', parameters('containerRegistryName'))]",
+              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]"
+            }
+          ],
+          "secrets": [
+            {
+              "name": "graph-client-secret",
+              "keyVaultUrl": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', variables('keyVaultName'), 'GRAPH-CLIENT-SECRET'), '2023-07-01').secretUri]",
+              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]"
+            },
+            {
+              "name": "appinsights-connection-string",
+              "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').ConnectionString]"
+            }
+          ]
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "mcp-webhook",
+              "image": "[format('{0}.azurecr.io/flightdeck/mcp-webhook:latest', parameters('containerRegistryName'))]",
+              "resources": {
+                "cpu": "[json('0.5')]",
+                "memory": "1Gi"
+              },
+              "env": [
+                {
+                  "name": "PORT",
+                  "value": "3001"
+                },
+                {
+                  "name": "AZURE_TENANT_ID",
+                  "value": "[parameters('graphTenantId')]"
+                },
+                {
+                  "name": "AZURE_CLIENT_ID",
+                  "value": "[parameters('graphClientId')]"
+                },
+                {
+                  "name": "AZURE_CLIENT_SECRET",
+                  "secretRef": "graph-client-secret"
+                },
+                {
+                  "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                  "secretRef": "appinsights-connection-string"
+                }
+              ]
+            }
+          ],
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 5,
+            "rules": [
+              {
+                "name": "http-scaling",
+                "http": {
+                  "metadata": {
+                    "concurrentRequests": "50"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]",
+        "[resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('storageName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "minimumTlsVersion": "TLS1_2",
+        "supportsHttpsTrafficOnly": true
+      }
+    },
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "[variables('orchestratorAppName')]",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName')))]": {}
+        }
+      },
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName'))]",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "ingress": {
+            "external": true,
+            "targetPort": 7071,
+            "transport": "http",
+            "corsPolicy": {
+              "allowedOrigins": [
+                "https://*.powerapps.com"
+              ],
+              "allowedMethods": [
+                "GET",
+                "POST",
+                "OPTIONS"
+              ],
+              "allowedHeaders": [
+                "*"
+              ],
+              "allowCredentials": true,
+              "maxAge": 3600
+            }
+          },
+          "registries": [
+            {
+              "server": "[format('{0}.azurecr.io', parameters('containerRegistryName'))]",
+              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]"
+            }
+          ],
+          "secrets": [
+            {
+              "name": "graph-client-secret",
+              "keyVaultUrl": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', variables('keyVaultName'), 'GRAPH-CLIENT-SECRET'), '2023-07-01').secretUri]",
+              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]"
+            },
+            {
+              "name": "appinsights-connection-string",
+              "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').ConnectionString]"
+            },
+            {
+              "name": "storage-connection-string",
+              "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};EndpointSuffix={1};AccountKey={2}', variables('storageName'), environment().suffixes.storage, listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2023-05-01').keys[0].value)]"
+            }
+          ]
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "orchestrator",
+              "image": "[format('{0}.azurecr.io/flightdeck/orchestrator:latest', parameters('containerRegistryName'))]",
+              "resources": {
+                "cpu": "[json('0.25')]",
+                "memory": "0.5Gi"
+              },
+              "env": [
+                {
+                  "name": "PORT",
+                  "value": "7071"
+                },
+                {
+                  "name": "FOUNDRY_ENDPOINT",
+                  "value": "https://ai-flightdeck.services.ai.azure.com/api/projects/flightdeck-project"
+                },
+                {
+                  "name": "GRAPH_TENANT_ID",
+                  "value": "[parameters('graphTenantId')]"
+                },
+                {
+                  "name": "GRAPH_CLIENT_ID",
+                  "value": "[parameters('graphClientId')]"
+                },
+                {
+                  "name": "GRAPH_CLIENT_SECRET",
+                  "secretRef": "graph-client-secret"
+                },
+                {
+                  "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                  "secretRef": "appinsights-connection-string"
+                },
+                {
+                  "name": "AZURE_STORAGE_CONNECTION_STRING",
+                  "secretRef": "storage-connection-string"
+                }
+              ]
+            }
+          ],
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 3,
+            "rules": [
+              {
+                "name": "http-scaling",
+                "http": {
+                  "metadata": {
+                    "concurrentRequests": "30"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]",
+        "[resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "mcpDelegatedFqdn": {
+      "type": "string",
+      "metadata": {
+        "description": "FQDN of the delegated MCP server."
+      },
+      "value": "[reference(resourceId('Microsoft.App/containerApps', variables('mcpDelegatedAppName')), '2024-03-01').configuration.ingress.fqdn]"
+    },
+    "mcpWebhookFqdn": {
+      "type": "string",
+      "metadata": {
+        "description": "FQDN of the webhook MCP server."
+      },
+      "value": "[reference(resourceId('Microsoft.App/containerApps', variables('mcpWebhookAppName')), '2024-03-01').configuration.ingress.fqdn]"
+    },
+    "orchestratorFqdn": {
+      "type": "string",
+      "metadata": {
+        "description": "FQDN of the orchestrator Container App for Graph webhook notifications."
+      },
+      "value": "[reference(resourceId('Microsoft.App/containerApps', variables('orchestratorAppName')), '2024-03-01').configuration.ingress.fqdn]"
+    },
+    "appInsightsInstrumentationKey": {
+      "type": "string",
+      "metadata": {
+        "description": "Application Insights instrumentation key."
+      },
+      "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').InstrumentationKey]"
+    },
+    "keyVaultUri": {
+      "type": "string",
+      "metadata": {
+        "description": "Key Vault URI for secret management."
+      },
+      "value": "[reference(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), '2023-07-01').vaultUri]"
+    },
+    "managedIdentityPrincipalId": {
+      "type": "string",
+      "metadata": {
+        "description": "Managed Identity principal ID for RBAC assignments."
+      },
+      "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName')), '2023-01-31').principalId]"
+    }
+  }
+}

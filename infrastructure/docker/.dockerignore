@@ -1,0 +1,76 @@
+# =============================================================================
+# FlightDeck — Docker ignore file
+# Prevents unnecessary files from being sent to the Docker build context.
+# =============================================================================
+
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build output
+dist
+build
+
+# Testing
+coverage
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+__tests__
+
+# Git
+.git
+.gitignore
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Docker files (avoid recursive context)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Documentation
+docs
+*.md
+LICENSE
+
+# Infrastructure (not needed in container images)
+infrastructure
+
+# Frontend app (not needed for MCP server containers)
+public
+src/components
+src/pages
+src/providers
+src/stores
+src/hooks
+src/assets
+index.html
+vite.config.ts
+tsconfig.json
+tsconfig.app.json
+tsconfig.node.json
+components.json
+eslint.config.js
+postcss.config.*
+tailwind.config.*
+
+# Logs
+*.log
+npm-debug.log*

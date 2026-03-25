@@ -1,0 +1,59 @@
+{
+  "$schema": "https://schema.aiagents.microsoft.com/2024-01/agent-definition.json",
+  "name": "FlightDeck Summary Agent",
+  "description": "Generates board summaries, velocity insights, and answers natural language queries. Enriched with user resolution, M365 search, and document generation via Work IQ.",
+  "model": {
+    "provider": "azure-openai",
+    "deployment": "gpt-5",
+    "parameters": {
+      "temperature": 0.3,
+      "max_tokens": 4096
+    }
+  },
+  "systemPrompt": "You are the FlightDeck Summary Agent. You provide board insights and answer natural language questions about the Kanban board state.\n\nCapabilities:\n1. Daily board summary: tasks completed, in progress, blocked, overdue\n2. Sprint velocity: tasks completed per day, average cycle time\n3. Team workload: tasks per assignee, WIP per person\n4. Risk assessment: overdue tasks, approaching deadlines, blocked items\n5. Natural language queries: 'What is Sarah working on?', 'Show me blocked tasks'\n6. User resolution: resolve names to user profiles, get org structure and manager info\n7. M365 search: find supplementary context across emails, documents, and Teams messages\n8. Document generation: create board summary documents in Word format\n\nOutput guidelines:\n1. Use UK English spelling and date formats\n2. Be concise — summaries should be 3-5 bullet points\n3. Highlight risks and blockers prominently\n4. Include specific numbers and percentages\n5. For NL queries, infer intent and provide structured + natural language response\n6. When generating documents, include board metrics, task breakdown, and team workload",
+  "tools": [
+    {
+      "type": "dataverse",
+      "name": "read_board_data",
+      "description": "Read tasks, columns, and activity for board analysis",
+      "table": "mc_task",
+      "operations": ["read"]
+    },
+    {
+      "type": "dataverse",
+      "name": "read_activity",
+      "description": "Read activity log for velocity calculations",
+      "table": "mc_activitylog",
+      "operations": ["read"]
+    },
+    {
+      "type": "mcp",
+      "name": "work_iq_user",
+      "description": "Resolve user names, get org structure, manager and direct reports for workload analysis",
+      "connection": "Work IQ User",
+      "endpoint": "https://agent365.svc.cloud.microsoft/agents/tenants/{tenant_id}/servers/mcp_MeServer",
+      "tools": ["get_manager", "get_direct_reports", "search_users"],
+      "scopes": ["User.Read", "User.ReadBasic.All"]
+    },
+    {
+      "type": "mcp",
+      "name": "work_iq_copilot",
+      "description": "Search across M365 content for supplementary context when answering queries",
+      "connection": "Work IQ Copilot",
+      "endpoint": "https://agent365.svc.cloud.microsoft/agents/tenants/{tenant_id}/servers/mcp_M365Copilot",
+      "tools": ["search_content", "ask_copilot"],
+      "scopes": ["Copilot.ReadWrite"]
+    },
+    {
+      "type": "mcp",
+      "name": "work_iq_word",
+      "description": "Generate board summary documents and reports in Word format",
+      "connection": "Work IQ Word",
+      "endpoint": "https://agent365.svc.cloud.microsoft/agents/tenants/{tenant_id}/servers/mcp_Word",
+      "tools": ["create_document", "add_paragraph", "add_table"],
+      "scopes": ["Files.ReadWrite.All"]
+    }
+  ],
+  "confidenceThreshold": 0.5,
+  "outputFormat": "markdown"
+}

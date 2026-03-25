@@ -1,0 +1,62 @@
+# =============================================================================
+# FlightDeck — Local Dev Docker Compose
+# Runs both MCP servers together for local development and testing.
+# Usage: docker compose up --build
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Delegated (OBO) MCP Server — per-user auth, port 3000
+  # ---------------------------------------------------------------------------
+  mcp-delegated:
+    build:
+      context: ../../  # repo root (where the MCP server source will be cloned)
+      dockerfile: infrastructure/docker/Dockerfile.mcp-delegated
+    container_name: flightdeck-mcp-delegated
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - GRAPH_TENANT_ID=${GRAPH_TENANT_ID}
+      - GRAPH_CLIENT_ID=${GRAPH_CLIENT_ID}
+      - GRAPH_CLIENT_SECRET=${GRAPH_CLIENT_SECRET}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - flightdeck
+
+  # ---------------------------------------------------------------------------
+  # Webhook (App-level) MCP Server — tenant-wide auth, port 3001
+  # ---------------------------------------------------------------------------
+  mcp-webhook:
+    build:
+      context: ../../  # repo root (where the MCP server source will be cloned)
+      dockerfile: infrastructure/docker/Dockerfile.mcp-webhook
+    container_name: flightdeck-mcp-webhook
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - GRAPH_TENANT_ID=${GRAPH_TENANT_ID}
+      - GRAPH_CLIENT_ID=${GRAPH_CLIENT_ID}
+      - GRAPH_CLIENT_SECRET=${GRAPH_CLIENT_SECRET}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - flightdeck
+
+networks:
+  flightdeck:
+    driver: bridge

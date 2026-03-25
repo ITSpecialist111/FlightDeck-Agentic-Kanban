@@ -1,0 +1,93 @@
+{
+  "$schema": "https://schema.aiagents.microsoft.com/2024-01/agent-definition.json",
+  "name": "FlightDeck Transcript Analyst",
+  "description": "Analyses meeting transcripts to extract action items, decisions, and deadlines with confidence scores. Retrieves transcripts via custom MCP and enriches context with calendar data.",
+  "model": {
+    "provider": "azure-openai",
+    "deployment": "gpt-5",
+    "parameters": {
+      "temperature": 0.1,
+      "max_tokens": 4096
+    }
+  },
+  "systemPrompt": "You are the FlightDeck Transcript Analyst agent. Your job is to analyse meeting transcripts and extract structured action items.\n\nFor each action item, output a JSON object with:\n- title: concise task title (max 80 chars)\n- description: fuller context from the transcript\n- assigneeName: who was assigned (or empty string)\n- priority: critical | high | medium | low\n- dueDate: ISO date if mentioned, null otherwise\n- sourceReference: meeting name and date\n- meetingDate: ISO datetime of the meeting\n- confidence: 0-1 score for extraction confidence\n- labels: relevant tags\n\nRules:\n1. Only extract items where someone committed to doing something\n2. Ignore general discussion points unless a clear action was stated\n3. Set confidence below 0.7 if the assignment or deadline is ambiguous\n4. Use UK date format assumptions (DD/MM/YYYY)\n5. Output an array of action items as valid JSON\n6. Use calendar context to cross-reference attendee roles and meeting series\n7. When retrieving transcripts, prefer the delegated MCP for per-user access",
+  "tools": [
+    {
+      "type": "function",
+      "name": "submit_action_items",
+      "description": "Submit extracted action items to the Board Manager for task creation",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "meetingTitle": {
+            "type": "string"
+          },
+          "meetingDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actionItems": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "assigneeName": {
+                  "type": "string"
+                },
+                "priority": {
+                  "type": "string",
+                  "enum": ["critical", "high", "medium", "low"]
+                },
+                "dueDate": {
+                  "type": "string",
+                  "format": "date",
+                  "nullable": true
+                },
+                "confidence": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "labels": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": ["title", "description", "priority", "confidence"]
+            }
+          }
+        },
+        "required": ["meetingTitle", "meetingDate", "actionItems"]
+      }
+    },
+    {
+      "type": "mcp",
+      "name": "work_iq_calendar",
+      "description": "Read meeting details, attendees, and recurrence patterns for context enrichment",
+      "connection": "Work IQ Calendar",
+      "endpoint": "https://agent365.svc.cloud.microsoft/agents/tenants/{tenant_id}/servers/mcp_CalendarTools",
+      "tools": ["list_events", "get_event"],
+      "scopes": ["Calendars.Read"]
+    },
+    {
+      "type": "mcp",
+      "name": "transcript_mcp_delegated",
+      "description": "Retrieve meeting transcripts via the custom Delegated MCP server (per-user OBO auth)",
+      "connection": "Transcript MCP (Delegated)",
+      "endpoint": "https://{mcp-delegated-fqdn}/mcp",
+      "transport": "streamable-http",
+      "tools": ["list_recent_meetings", "get_meeting_transcript"],
+      "scopes": ["api://{client_id}/access_as_user"]
+    }
+  ],
+  "confidenceThreshold": 0.7,
+  "outputFormat": "structured_json"
+}

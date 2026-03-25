@@ -1,0 +1,27 @@
+# FlightDeck -- Agent Orchestrator
+# Express server with cron triggers. Runs on Container Apps (minReplicas=1).
+# Triggers: transcript-webhook (HTTP), signal-scanner, daily-summary, subscription-renewal (cron)
+
+FROM node:20-alpine
+
+RUN addgroup -g 1001 -S orchestrator && \
+    adduser -S orchestrator -u 1001 -G orchestrator
+
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=7071
+
+COPY infrastructure/functions/package.json infrastructure/functions/package-lock.json* ./
+RUN npm ci --omit=dev && npm cache clean --force
+
+COPY infrastructure/functions/src ./src
+
+RUN chown -R orchestrator:orchestrator /app
+USER orchestrator
+
+EXPOSE 7071
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:7071/health || exit 1
+
+CMD ["node", "src/index.js"]

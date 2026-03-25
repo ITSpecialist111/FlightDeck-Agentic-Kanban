@@ -1,0 +1,133 @@
+{
+  "$schema": "https://schema.flightdeck.dev/mcp-connections.json",
+  "description": "MCP server connections for FlightDeck AI agents",
+  "connections": [
+    {
+      "name": "Work IQ Mail",
+      "type": "work-iq",
+      "endpoint": "https://agent365.svc.cloud.microsoft/agents/tenants/{tenant_id}/servers/mcp_MailTools",
+      "auth": "delegated-obo",
+      "scopes": ["Mail.Read", "Mail.Send", "Mail.ReadWrite"],
+      "purpose": "Email signal detection, assignment notifications, archive reports",
+      "usedBy": {
+        "triggers": ["signal-scanner", "transcript-webhook", "daily-summary", "subscription-renewal"],
+        "agents": ["board-manager", "signal-monitor"]
+      }
+    },
+    {
+      "name": "Work IQ Calendar",
+      "type": "work-iq",
+      "endpoint": "https://agent365.svc.cloud.microsoft/agents/tenants/{tenant_id}/servers/mcp_CalendarTools",
+      "auth": "delegated-obo",
+      "scopes": ["Calendars.Read", "Calendars.ReadWrite"],
+      "purpose": "Meeting context, follow-up scheduling, availability checks",
+      "usedBy": {
+        "triggers": ["transcript-webhook"],
+        "agents": ["transcript-analyst"]
+      }
+    },
+    {
+      "name": "Work IQ Teams",
+      "type": "work-iq",
+      "endpoint": "https://agent365.svc.cloud.microsoft/agents/tenants/{tenant_id}/servers/mcp_Teams",
+      "auth": "delegated-obo",
+      "scopes": ["Chat.Read", "Chat.ReadWrite", "ChannelMessage.Send", "ChannelMessage.Read.All"],
+      "purpose": "Signal monitoring, task notifications, board updates, failure alerts",
+      "usedBy": {
+        "triggers": ["signal-scanner", "daily-summary", "subscription-renewal"],
+        "agents": ["board-manager", "signal-monitor"]
+      }
+    },
+    {
+      "name": "Work IQ User",
+      "type": "work-iq",
+      "endpoint": "https://agent365.svc.cloud.microsoft/agents/tenants/{tenant_id}/servers/mcp_MeServer",
+      "auth": "delegated-obo",
+      "scopes": ["User.Read", "User.ReadBasic.All"],
+      "purpose": "User resolution, org structure, manager lookups",
+      "usedBy": {
+        "triggers": ["daily-summary"],
+        "agents": ["summary-agent"]
+      }
+    },
+    {
+      "name": "Work IQ SharePoint",
+      "type": "work-iq",
+      "endpoint": "https://agent365.svc.cloud.microsoft/agents/tenants/{tenant_id}/servers/mcp_SharePoint",
+      "auth": "delegated-obo",
+      "scopes": ["Sites.ReadWrite.All", "Files.ReadWrite.All"],
+      "purpose": "Transcript archival, task summary storage, document generation",
+      "usedBy": {
+        "triggers": ["transcript-webhook"],
+        "agents": []
+      }
+    },
+    {
+      "name": "Work IQ Copilot",
+      "type": "work-iq",
+      "endpoint": "https://agent365.svc.cloud.microsoft/agents/tenants/{tenant_id}/servers/mcp_M365Copilot",
+      "auth": "delegated-obo",
+      "scopes": ["Copilot.ReadWrite"],
+      "purpose": "M365 content search, grounded answers to board queries",
+      "usedBy": {
+        "triggers": ["daily-summary"],
+        "agents": ["summary-agent"]
+      }
+    },
+    {
+      "name": "Work IQ Word",
+      "type": "work-iq",
+      "endpoint": "https://agent365.svc.cloud.microsoft/agents/tenants/{tenant_id}/servers/mcp_Word",
+      "auth": "delegated-obo",
+      "scopes": ["Files.ReadWrite.All"],
+      "purpose": "Summary document generation, board report creation",
+      "usedBy": {
+        "topics": [],
+        "agents": ["summary-agent"]
+      }
+    },
+    {
+      "name": "Transcript MCP (Delegated)",
+      "type": "custom",
+      "endpoint": "https://{mcp-delegated-fqdn}/mcp",
+      "auth": "delegated-obo",
+      "transport": "streamable-http",
+      "scopes": ["api://{client_id}/access_as_user"],
+      "purpose": "On-demand meeting transcript retrieval (per-user)",
+      "repository": "github.com/ITSpecialist111/MicrosoftGraph_Transcript_MCP",
+      "tools": ["list_recent_meetings", "get_meeting_transcript", "save_transcript"],
+      "usedBy": {
+        "triggers": ["transcript-webhook"],
+        "agents": ["transcript-analyst"]
+      }
+    },
+    {
+      "name": "Transcript MCP (Webhook)",
+      "type": "custom",
+      "endpoint": "https://{mcp-webhook-fqdn}/mcp",
+      "auth": "app-only",
+      "transport": "streamable-http",
+      "scopes": ["OnlineMeetingTranscript.Read.All", "OnlineMeetingRecording.Read.All"],
+      "purpose": "Event-driven transcript/recording notifications (tenant-wide)",
+      "repository": "github.com/ITSpecialist111/MicrosoftGraph_Transcript_Webhook_MCP",
+      "tools": ["subscribe_to_transcripts", "subscribe_to_recordings", "list_subscriptions", "renew_subscription", "delete_subscription", "get_notification_log", "get_transcript_content", "get_recording_url"],
+      "resources": ["webhook://status", "webhook://subscriptions/{id}", "webhook://notifications/{index}", "webhook://transcripts/{userId}/{meetingId}/{transcriptId}"],
+      "usedBy": {
+        "triggers": ["subscription-renewal"],
+        "agents": []
+      }
+    },
+    {
+      "name": "Dataverse",
+      "type": "work-iq",
+      "endpoint": "built-in",
+      "auth": "delegated-obo",
+      "purpose": "CRUD operations on FlightDeck mc_ tables",
+      "tables": ["mc_organization", "mc_project", "mc_board", "mc_column", "mc_task", "mc_comment", "mc_activitylog", "mc_agentaction", "mc_boardmember"],
+      "usedBy": {
+        "triggers": ["transcript-webhook", "signal-scanner", "daily-summary", "subscription-renewal"],
+        "agents": ["board-manager", "signal-monitor", "summary-agent"]
+      }
+    }
+  ]
+}

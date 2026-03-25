@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "uksouth"
+    },
+    "containerRegistryName": {
+      "value": "crflightdeck"
+    },
+    "graphTenantId": {
+      "value": "e4ccbd32-1a13-4cb6-8fda-c392e7ea359f"
+    },
+    "graphClientId": {
+      "value": "1a46ecf3-31b0-4884-8747-b39a34e26554"
+    },
+    "environment": {
+      "value": "dev"
+    }
+  }
+}
