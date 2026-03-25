@@ -3,6 +3,7 @@ import { ErrorBoundary } from "@/components/shared/ErrorBoundary"
 import { useBoardStore } from "@/stores/board-store"
 import { AgentStatusPanel } from "./AgentStatusPanel"
 import { AgentActionFeed } from "./AgentActionFeed"
+import { CrossBoardAlerts } from "./CrossBoardAlerts"
 import { BoardMetrics } from "./BoardMetrics"
 import { ActivityTimeline } from "./ActivityTimeline"
 
@@ -26,6 +27,12 @@ export function TelemetryBlade() {
 
         <ErrorBoundary>
           <AgentActionFeed />
+        </ErrorBoundary>
+
+        <Separator />
+
+        <ErrorBoundary>
+          <CrossBoardAlerts />
         </ErrorBoundary>
 
         <Separator />
