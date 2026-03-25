@@ -2,6 +2,7 @@ import { useMemo } from "react"
 import { BarChart3, TrendingUp, TrendingDown, Minus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTasks } from "@/hooks/use-tasks"
+import { useColumns } from "@/hooks/use-columns"
 import { Progress } from "@/components/ui/progress"
 
 type Trend = "up" | "down" | "flat"
@@ -42,15 +43,20 @@ function MetricCard({ label, value, trend, variant = "default" }: MetricCardProp
 
 export function BoardMetrics({ boardId }: { boardId: string }) {
   const { tasks } = useTasks(boardId)
+  const { columns } = useColumns(boardId)
 
   const metrics = useMemo(() => {
+    const columnTypeMap = new Map<string, string>()
+    for (const col of columns) {
+      columnTypeMap.set(col.id, col.columnType)
+    }
     const total = tasks.length
-    const inProgress = tasks.filter((t) => t.columnId === "col-in_progress").length
-    const completed = tasks.filter((t) => t.columnId === "col-done").length
+    const inProgress = tasks.filter((t) => columnTypeMap.get(t.columnId) === "in_progress").length
+    const completed = tasks.filter((t) => columnTypeMap.get(t.columnId) === "done").length
     const blocked = tasks.filter((t) => t.isBlocked).length
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0
     return { total, inProgress, completed, blocked, completionRate }
-  }, [tasks])
+  }, [tasks, columns])
 
   return (
     <div className="px-4 py-3">

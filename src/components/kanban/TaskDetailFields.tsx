@@ -1,6 +1,7 @@
-import { useState, useRef, type KeyboardEvent } from "react"
+import { useState, useRef, useMemo, type KeyboardEvent } from "react"
 import type { KanbanTask, Priority, ColumnType } from "@/lib/types"
 import { useTasks } from "@/hooks/use-tasks"
+import { useColumns } from "@/hooks/use-columns"
 import { useBoardMembers } from "@/hooks/use-board-members"
 import { COLUMN_CONFIG, PRIORITY_CONFIG } from "@/lib/constants"
 import { cn } from "@/lib/utils"
@@ -25,18 +26,21 @@ import { PriorityIcon } from "@/components/shared/PriorityIcon"
 import { SourceBadge } from "@/components/shared/SourceBadge"
 import { CalendarDays, X, BrainCircuit, UserCheck, Sparkles } from "lucide-react"
 
-// Map column IDs (e.g. "col-todo") to ColumnType (e.g. "todo")
-function columnIdToType(columnId: string): ColumnType {
-  return columnId.replace("col-", "") as ColumnType
-}
-
-function typeToColumnId(type: ColumnType): string {
-  return `col-${type}`
-}
-
 export function TaskDetailFields({ task }: { task: KanbanTask }) {
   const { updateTask } = useTasks(task.boardId)
+  const { columns } = useColumns(task.boardId)
   const { members } = useBoardMembers(task.boardId)
+
+  // Build column ID ↔ type lookups from loaded columns
+  const { columnTypeMap, typeToIdMap } = useMemo(() => {
+    const ctm = new Map<string, ColumnType>()
+    const ttm = new Map<ColumnType, string>()
+    for (const col of columns) {
+      ctm.set(col.id, col.columnType)
+      ttm.set(col.columnType, col.id)
+    }
+    return { columnTypeMap: ctm, typeToIdMap: ttm }
+  }, [columns])
 
   // Inline editing state
   const [editingTitle, setEditingTitle] = useState(false)
@@ -156,8 +160,11 @@ export function TaskDetailFields({ task }: { task: KanbanTask }) {
       <div className="space-y-1.5">
         <Label className="text-xs text-muted-foreground">Status</Label>
         <Select
-          value={columnIdToType(task.columnId)}
-          onValueChange={(value) => saveField("columnId", typeToColumnId(value as ColumnType))}
+          value={columnTypeMap.get(task.columnId) ?? "backlog"}
+          onValueChange={(value) => {
+            const newColumnId = typeToIdMap.get(value as ColumnType)
+            if (newColumnId) saveField("columnId", newColumnId)
+          }}
         >
           <SelectTrigger className="w-full text-sm h-9">
             <SelectValue />

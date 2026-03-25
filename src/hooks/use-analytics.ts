@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 import { useTasks } from "./use-tasks"
+import { useColumns } from "./use-columns"
 import { useActivityLog } from "./use-activity-log"
 import { COLUMN_CONFIG, PRIORITY_CONFIG, SOURCE_CONFIG } from "@/lib/constants"
 import { startOfDay, format, differenceInDays, parseISO } from "date-fns"
@@ -31,16 +32,22 @@ const SOURCE_COLORS: Record<TaskSource, string> = {
 
 export function useAnalytics(boardId: string) {
   const { tasks, isLoading: tasksLoading } = useTasks(boardId)
+  const { columns, isLoading: columnsLoading } = useColumns(boardId)
   const { activities, isLoading: activitiesLoading } = useActivityLog(boardId)
 
   const data = useMemo<AnalyticsData | null>(() => {
-    if (tasks.length === 0) return null
+    if (tasks.length === 0 || columns.length === 0) return null
+
+    // Build columnId → columnType lookup from loaded columns
+    const columnTypeMap = new Map<string, ColumnType>()
+    for (const col of columns) {
+      columnTypeMap.set(col.id, col.columnType)
+    }
 
     // Tasks by status (column)
     const statusCounts = new Map<string, number>()
     for (const task of tasks) {
-      // Extract column type from columnId (e.g. "col-in_progress" -> "in_progress")
-      const colType = task.columnId.replace("col-", "") as ColumnType
+      const colType = columnTypeMap.get(task.columnId) ?? "backlog"
       const label = COLUMN_CONFIG[colType]?.label ?? colType
       statusCounts.set(label, (statusCounts.get(label) ?? 0) + 1)
     }
@@ -94,7 +101,7 @@ export function useAnalytics(boardId: string) {
 
     // Summary metrics
     const now = new Date()
-    const doneTasks = tasks.filter((t) => t.columnId === "col-done")
+    const doneTasks = tasks.filter((t) => columnTypeMap.get(t.columnId) === "done")
     const completionRate = tasks.length > 0 ? Math.round((doneTasks.length / tasks.length) * 100) : 0
 
     const nonCompletedTasks = tasks.filter((t) => !t.completedDate)
@@ -128,10 +135,10 @@ export function useAnalytics(boardId: string) {
         overdueCount,
       },
     }
-  }, [tasks, activities])
+  }, [tasks, columns, activities])
 
   return {
     data,
-    isLoading: tasksLoading || activitiesLoading,
+    isLoading: tasksLoading || columnsLoading || activitiesLoading,
   }
 }

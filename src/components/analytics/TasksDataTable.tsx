@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import {
   useReactTable,
   getCoreRowModel,
@@ -7,8 +7,9 @@ import {
   flexRender,
   type SortingState,
 } from "@tanstack/react-table"
-import type { KanbanTask } from "@/lib/types"
-import { columns } from "./data-table-columns"
+import type { KanbanTask, ColumnType } from "@/lib/types"
+import { createColumns } from "./data-table-columns"
+import { useColumns } from "@/hooks/use-columns"
 import { useUIStore } from "@/stores/ui-store"
 import {
   Table,
@@ -22,10 +23,22 @@ import { cn } from "@/lib/utils"
 
 interface TasksDataTableProps {
   tasks: KanbanTask[]
+  boardId: string
 }
 
-export function TasksDataTable({ tasks }: TasksDataTableProps) {
+export function TasksDataTable({ tasks, boardId }: TasksDataTableProps) {
   const openTaskDetail = useUIStore((s) => s.openTaskDetail)
+  const { columns: boardColumns } = useColumns(boardId)
+
+  const columnTypeMap = useMemo(() => {
+    const m = new Map<string, ColumnType>()
+    for (const col of boardColumns) {
+      m.set(col.id, col.columnType)
+    }
+    return m
+  }, [boardColumns])
+
+  const columns = useMemo(() => createColumns(columnTypeMap), [columnTypeMap])
   const [sorting, setSorting] = useState<SortingState>([
     { id: "createdOn", desc: true },
   ])

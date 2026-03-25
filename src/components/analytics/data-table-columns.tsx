@@ -37,11 +37,8 @@ function SortableHeader({
   )
 }
 
-function getColumnType(columnId: string): ColumnType {
-  return columnId.replace("col-", "") as ColumnType
-}
-
-export const columns: ColumnDef<KanbanTask>[] = [
+export function createColumns(columnTypeMap: Map<string, ColumnType>): ColumnDef<KanbanTask>[] {
+  return [
   {
     accessorKey: "title",
     header: ({ column }) => <SortableHeader column={column} label="Title" />,
@@ -56,7 +53,7 @@ export const columns: ColumnDef<KanbanTask>[] = [
     header: ({ column }) => <SortableHeader column={column} label="Status" />,
     cell: ({ row }) => {
       const columnId = row.getValue("columnId") as string
-      const colType = getColumnType(columnId)
+      const colType = columnTypeMap.get(columnId) ?? "backlog"
       const config = COLUMN_CONFIG[colType]
       return (
         <div className="flex items-center gap-2">
@@ -150,3 +147,4 @@ export const columns: ColumnDef<KanbanTask>[] = [
     },
   },
 ]
+}

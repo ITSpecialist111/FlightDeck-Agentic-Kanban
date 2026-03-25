@@ -103,7 +103,7 @@ export default function AnalyticsPage() {
                 <Skeleton className="h-10 w-full" />
               </div>
             ) : (
-              <TasksDataTable tasks={tasks} />
+              <TasksDataTable tasks={tasks} boardId={boardId} />
             )}
           </div>
         </TabsContent>
