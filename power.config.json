@@ -1,0 +1,56 @@
+{
+  "version": "1.0",
+  "appId": "a18a78d8-3e49-4f1b-ab4d-36e1dbc82e03",
+  "appDisplayName": "FlightDeck",
+  "region": "prod",
+  "environmentId": "ab762569-955e-ec43-9a92-c2bbcbec9210",
+  "description": "Enterprise agentic AI-powered Kanban board",
+  "buildPath": "dist",
+  "buildEntryPoint": "index.html",
+  "localAppUrl": "http://localhost:5176",
+  "logoPath": "Default",
+  "connectionReferences": {},
+  "databaseReferences": {
+    "default.cds": {
+      "dataSources": {
+        "tasks": {
+          "entitySetName": "mc_tasks",
+          "logicalName": "mc_task"
+        },
+        "columns": {
+          "entitySetName": "mc_columns",
+          "logicalName": "mc_column"
+        },
+        "boards": {
+          "entitySetName": "mc_boards",
+          "logicalName": "mc_board"
+        },
+        "projects": {
+          "entitySetName": "mc_projects",
+          "logicalName": "mc_project"
+        },
+        "organizations": {
+          "entitySetName": "mc_organizations",
+          "logicalName": "mc_organization"
+        },
+        "comments": {
+          "entitySetName": "mc_comments",
+          "logicalName": "mc_comment"
+        },
+        "activitylogs": {
+          "entitySetName": "mc_activitylogs",
+          "logicalName": "mc_activitylog"
+        },
+        "agentactions": {
+          "entitySetName": "mc_agentactions",
+          "logicalName": "mc_agentaction"
+        },
+        "boardmembers": {
+          "entitySetName": "mc_boardmembers",
+          "logicalName": "mc_boardmember"
+        }
+      },
+      "environmentVariableName": ""
+    }
+  }
+}

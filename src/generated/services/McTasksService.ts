@@ -99,13 +99,14 @@ function toDv(data: Partial<KanbanTask>): Record<string, unknown> {
 
 export const McTasksService = {
   async getAll(options?: { boardId?: string }): Promise<KanbanTask[]> {
-    const rows = await retrieveMultiple<DvTask>(TABLE, {
+    const queryOptions = {
       select: SELECT_FIELDS,
       filter: options?.boardId
         ? `_mc_taskboardlookup_value eq '${options.boardId}'`
         : undefined,
       orderBy: ["mc_sortorder asc"],
-    })
+    }
+    const rows = await retrieveMultiple<DvTask>(TABLE, queryOptions)
     return rows.map(fromDv)
   },
 
