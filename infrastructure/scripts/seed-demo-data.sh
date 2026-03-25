@@ -33,7 +33,7 @@ create_member() {
   echo -n "  ${name}... "
   az rest --method post --url "${API}/mc_boardmembers" --resource "${DV}" \
     --headers "Content-Type=application/json" \
-    --body "{\"mc_username\":\"${name}\",\"mc_useremail\":\"${email}\",\"mc_role\":${role},\"mc_boardlookup@odata.bind\":\"/mc_boards(${BOARD_ID})\"}" \
+    --body "{\"mc_name\":\"${name}\",\"mc_email\":\"${email}\",\"mc_role\":${role},\"mc_boardlookup@odata.bind\":\"/mc_boards(${BOARD_ID})\"}" \
     -o none 2>&1 && echo "OK" || echo "SKIP"
   sleep 2
 }
@@ -140,7 +140,7 @@ create_activity() {
   echo -n "  ${desc:0:50}... "
   az rest --method post --url "${API}/mc_activitylogs" --resource "${DV}" \
     --headers "Content-Type=application/json" \
-    --body "{\"mc_action\":${action},\"mc_description\":\"${desc}\",\"mc_performedby\":\"${user}\",\"mc_boardlookup@odata.bind\":\"/mc_boards(${BOARD_ID})\"}" \
+    --body "{\"mc_action\":${action},\"mc_description\":\"${desc}\",\"mc_actorname\":\"${user}\",\"mc_boardlookup@odata.bind\":\"/mc_boards(${BOARD_ID})\"}" \
     -o none 2>&1 && echo "OK" || echo "SKIP"
   sleep 1
 }
@@ -161,24 +161,24 @@ echo ""
 echo "=== Creating Agent Actions ==="
 
 create_agent_action() {
-  local agent=$1 action=$2 status=$3 confidence=$4 mcp=$5
+  local agent=$1 action=$2 status=$3 confidence=$4
   echo -n "  ${agent}: ${action:0:40}... "
   az rest --method post --url "${API}/mc_agentactions" --resource "${DV}" \
     --headers "Content-Type=application/json" \
-    --body "{\"mc_agentname\":\"${agent}\",\"mc_action\":\"${action}\",\"mc_status\":${status},\"mc_confidence\":${confidence},\"mc_mcpsource\":\"${mcp}\",\"mc_boardlookup@odata.bind\":\"/mc_boards(${BOARD_ID})\"}" \
+    --body "{\"mc_agentname\":\"${agent}\",\"mc_actiontype\":\"${action}\",\"mc_status\":${status},\"mc_confidence\":${confidence},\"mc_boardlookup@odata.bind\":\"/mc_boards(${BOARD_ID})\"}" \
     -o none 2>&1 && echo "OK" || echo "SKIP"
   sleep 1
 }
 
 # Status: 100000000=pending, 100000001=approved, 100000002=rejected, 100000003=auto-applied
-create_agent_action "transcript-analyst" "Extracted 3 action items from Sprint Planning meeting" 100000001 92 "mcp_CalendarTools"
-create_agent_action "board-manager" "Created task: Implement board-level notification preferences" 100000003 88 "mcp_MailTools"
-create_agent_action "signal-monitor" "Detected priority escalation in email from stakeholder" 100000000 76 "mcp_MailTools"
-create_agent_action "summary-agent" "Generated daily board summary for 25 Mar 2026" 100000003 95 "mcp_MeServer"
-create_agent_action "board-manager" "Suggested reassignment of Calendar MCP task to Sarah Chen" 100000001 82 "mcp_CalendarTools"
-create_agent_action "transcript-analyst" "Extracted 5 action items from Client Onboarding call" 100000001 89 "mcp_CalendarTools"
-create_agent_action "signal-monitor" "Detected blocker mention in Teams channel #project-phoenix" 100000000 71 "mcp_TeamsTools"
-create_agent_action "summary-agent" "Predicted completion: meeting-to-sprint pipeline by 3 Apr" 100000003 78 "mcp_MeServer"
+create_agent_action "transcript-analyst" "Extracted 3 action items from Sprint Planning meeting" 100000001 0.92
+create_agent_action "board-manager" "Created task: Implement board-level notification preferences" 100000003 0.88
+create_agent_action "signal-monitor" "Detected priority escalation in email from stakeholder" 100000000 0.76
+create_agent_action "summary-agent" "Generated daily board summary for 25 Mar 2026" 100000003 0.95
+create_agent_action "board-manager" "Suggested reassignment of Calendar MCP task to Sarah Chen" 100000001 0.82
+create_agent_action "transcript-analyst" "Extracted 5 action items from Client Onboarding call" 100000001 0.89
+create_agent_action "signal-monitor" "Detected blocker mention in Teams channel #project-phoenix" 100000000 0.71
+create_agent_action "summary-agent" "Predicted completion: meeting-to-sprint pipeline by 3 Apr" 100000003 0.78
 
 echo ""
 echo "=== Demo data seeded successfully! ==="
