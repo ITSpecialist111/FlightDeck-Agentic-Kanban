@@ -23,8 +23,8 @@ const SELECT_FIELDS = [
 
 function fromDv(row: DvBoardMember): BoardMember {
   return {
-    id: row.mc_boardmemberid,
-    boardId: row._mc_boardlookup_value ?? "",
+    id: row.mc_boardmemberid?.toLowerCase() ?? "",
+    boardId: row._mc_boardlookup_value?.toLowerCase() ?? "",
     name: row.mc_name ?? "",
     email: row.mc_email ?? "",
     role: choiceMap.role.fromDv[row.mc_role] ?? "member",

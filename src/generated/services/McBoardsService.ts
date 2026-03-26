@@ -18,10 +18,10 @@ interface DvBoard {
 
 function fromDv(row: DvBoard): KanbanBoard {
   return {
-    id: row.mc_boardid,
+    id: row.mc_boardid?.toLowerCase() ?? "",
     name: row.mc_name ?? "",
     description: row.mc_description ?? "",
-    projectId: row._mc_projectlookup_value ?? "",
+    projectId: row._mc_projectlookup_value?.toLowerCase() ?? "",
     isDefault: row.mc_isdefault ?? false,
     agentsEnabled: row.mc_agentsenabled ?? false,
     pollInterval: row.mc_pollinterval ?? 15000,

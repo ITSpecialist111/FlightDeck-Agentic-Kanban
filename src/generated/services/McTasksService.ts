@@ -48,11 +48,11 @@ function fromDv(row: DvTask): KanbanTask {
   }
 
   return {
-    id: row.mc_taskid,
+    id: row.mc_taskid?.toLowerCase() ?? "",
     title: row.mc_title ?? "",
     description: row.mc_description ?? "",
-    columnId: row._mc_columnlookup_value ?? "",
-    boardId: row._mc_taskboardlookup_value ?? "",
+    columnId: row._mc_columnlookup_value?.toLowerCase() ?? "",
+    boardId: row._mc_taskboardlookup_value?.toLowerCase() ?? "",
     assigneeId: row.mc_assigneeid ?? "",
     assigneeName: row.mc_assigneename ?? "",
     priority: choiceMap.priority.fromDv[row.mc_priority] ?? "medium",

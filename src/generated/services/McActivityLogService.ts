@@ -29,9 +29,9 @@ const SELECT_FIELDS = [
 
 function fromDv(row: DvActivityLog): ActivityLogEntry {
   return {
-    id: row.mc_activitylogid,
-    boardId: row._mc_boardlookup_value ?? "",
-    taskId: row._mc_tasklookup_value ?? null,
+    id: row.mc_activitylogid?.toLowerCase() ?? "",
+    boardId: row._mc_boardlookup_value?.toLowerCase() ?? "",
+    taskId: row._mc_tasklookup_value?.toLowerCase() ?? null,
     action: choiceMap.action.fromDv[row.mc_action] ?? "created",
     description: row.mc_description ?? "",
     actorId: row.mc_actorid ?? "",

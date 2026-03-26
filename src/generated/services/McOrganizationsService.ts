@@ -14,7 +14,7 @@ interface DvOrganization {
 
 function fromDv(row: DvOrganization): Organization {
   return {
-    id: row.mc_organizationid,
+    id: row.mc_organizationid?.toLowerCase() ?? "",
     name: row.mc_name ?? "",
     logoUrl: row.mc_logourl ?? "",
   }

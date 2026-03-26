@@ -28,11 +28,11 @@ const SELECT_FIELDS = [
 
 function fromDv(row: DvAgentAction): AgentAction {
   return {
-    id: row.mc_agentactionid,
+    id: row.mc_agentactionid?.toLowerCase() ?? "",
     agentName: row.mc_agentname ?? "",
     actionType: row.mc_actiontype ?? "",
-    boardId: row._mc_boardlookup_value ?? "",
-    taskId: row._mc_tasklookup_value ?? null,
+    boardId: row._mc_boardlookup_value?.toLowerCase() ?? "",
+    taskId: row._mc_tasklookup_value?.toLowerCase() ?? null,
     status: choiceMap.agentStatus.fromDv[row.mc_status] ?? "pending",
     confidence: row.mc_confidence ?? 0,
     durationMs: row.mc_durationms ?? 0,

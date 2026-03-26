@@ -16,8 +16,8 @@ interface DvProject {
 
 function fromDv(row: DvProject): Project {
   return {
-    id: row.mc_projectid,
-    organizationId: row._mc_organizationlookup_value ?? "",
+    id: row.mc_projectid?.toLowerCase() ?? "",
+    organizationId: row._mc_organizationlookup_value?.toLowerCase() ?? "",
     name: row.mc_name ?? "",
     description: row.mc_description ?? "",
     color: row.mc_color ?? "#6b7280",

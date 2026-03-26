@@ -1,0 +1,15 @@
+node_modules
+dist
+dist-demo
+dist-ssr
+.git
+.github
+.claude
+.power
+infrastructure/demo
+infrastructure/scripts
+infrastructure/functions
+infrastructure/agents
+infrastructure/mcp-connections.json
+*.md
+!README.md

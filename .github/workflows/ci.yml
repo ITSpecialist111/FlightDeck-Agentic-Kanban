@@ -31,6 +31,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Build Demo
+        run: npm run build:demo
+
       - name: Upload build artefact
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
@@ -113,3 +116,60 @@ jobs:
           az containerapp update -n orchestrator-dev -g rg-flightdeck --image crflightdeck.azurecr.io/flightdeck/orchestrator:${{ github.sha }}
           az containerapp update -n mcp-delegated-dev -g rg-flightdeck --image crflightdeck.azurecr.io/flightdeck/mcp-delegated:${{ github.sha }}
           az containerapp update -n mcp-webhook-dev -g rg-flightdeck --image crflightdeck.azurecr.io/flightdeck/mcp-webhook:${{ github.sha }}
+
+  deploy-demo:
+    name: Build & Deploy Demo
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: dev
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Demo SPA
+        run: npm run build:demo
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: ACR Login
+        run: az acr login --name crflightdeck
+
+      - name: Build & Push Demo Image
+        run: |
+          docker build -t crflightdeck.azurecr.io/flightdeck/demo:${{ github.sha }} \
+                        -t crflightdeck.azurecr.io/flightdeck/demo:latest \
+                        -f infrastructure/docker/Dockerfile.demo .
+          docker push crflightdeck.azurecr.io/flightdeck/demo:${{ github.sha }}
+          docker push crflightdeck.azurecr.io/flightdeck/demo:latest
+
+      - name: Deploy Demo Bicep
+        uses: azure/arm-deploy@v2
+        with:
+          subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          resourceGroupName: rg-flightdeck
+          template: infrastructure/bicep/demo.bicep
+          parameters: imageTag=${{ github.sha }}
+          failOnStdErr: false
+
+      - name: Update Demo Container App
+        run: |
+          az containerapp update -n demo-dev -g rg-flightdeck \
+            --image crflightdeck.azurecr.io/flightdeck/demo:${{ github.sha }}

@@ -24,8 +24,8 @@ const SELECT_FIELDS = [
 
 function fromDv(row: DvComment): Comment {
   return {
-    id: row.mc_commentid,
-    taskId: row._mc_tasklookup_value ?? "",
+    id: row.mc_commentid?.toLowerCase() ?? "",
+    taskId: row._mc_tasklookup_value?.toLowerCase() ?? "",
     authorId: row.mc_authorid ?? "",
     authorName: row.mc_authorname ?? "",
     isAgent: row.mc_isagent ?? false,

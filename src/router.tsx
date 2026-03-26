@@ -16,9 +16,10 @@ const fallback = (
 )
 
 // IMPORTANT: Do not remove or modify the code below!
-// Normalize basename when hosted in Power Apps
-const BASENAME = new URL(".", location.href).pathname
-if (location.pathname.endsWith("/index.html")) {
+// Normalize basename when hosted in Power Apps (skip in demo mode)
+const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true"
+const BASENAME = isDemoMode ? "/" : new URL(".", location.href).pathname
+if (!isDemoMode && location.pathname.endsWith("/index.html")) {
   history.replaceState(null, "", BASENAME + location.search + location.hash);
 }
 

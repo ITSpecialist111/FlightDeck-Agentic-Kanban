@@ -19,9 +19,9 @@ interface DvColumn {
 
 function fromDv(row: DvColumn): KanbanColumn {
   return {
-    id: row.mc_columnid,
+    id: row.mc_columnid?.toLowerCase() ?? "",
     name: row.mc_name ?? "",
-    boardId: row._mc_boardlookup_value ?? "",
+    boardId: row._mc_boardlookup_value?.toLowerCase() ?? "",
     sortOrder: row.mc_sortorder ?? 0,
     color: row.mc_color ?? "#6b7280",
     wipLimit: row.mc_wiplimit ?? 0,
