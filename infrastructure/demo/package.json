@@ -1,0 +1,19 @@
+{
+  "name": "flightdeck-demo",
+  "version": "1.0.0",
+  "description": "FlightDeck live demo runner — showcases agentic Kanban pipeline",
+  "type": "module",
+  "scripts": {
+    "demo": "node demo-runner.js",
+    "demo:act1": "node demo-runner.js --act 1",
+    "demo:act2": "node demo-runner.js --act 2",
+    "demo:act3": "node demo-runner.js --act 3",
+    "demo:act4": "node demo-runner.js --act 4",
+    "demo:act5": "node demo-runner.js --act 5",
+    "demo:reset": "node demo-runner.js --reset",
+    "demo:interactive": "node demo-runner.js --interactive"
+  },
+  "dependencies": {
+    "@azure/identity": "^4.6.0"
+  }
+}

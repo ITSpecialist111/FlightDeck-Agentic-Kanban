@@ -42,7 +42,7 @@ jobs:
   deploy-infra:
     name: Deploy Infrastructure (Bicep)
     needs: build
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     environment: dev
 
@@ -72,7 +72,7 @@ jobs:
   deploy-containers:
     name: Build & Push Container Images
     needs: build
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     environment: dev
 
