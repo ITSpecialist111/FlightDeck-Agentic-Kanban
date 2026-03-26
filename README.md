@@ -596,6 +596,61 @@ See `docs/dataverse-setup.md` for complete table creation guide, column definiti
 
 ---
 
+## Competitive Landscape
+
+FlightDeck occupies a unique position in the market. While several products handle parts of the meeting-to-task pipeline, none combine all of them into a single, self-updating board inside the Microsoft enterprise stack.
+
+### Feature Comparison
+
+| Capability | FlightDeck | Fireflies.ai | Tactiq | Fellow.ai | Grain | Notion AI | M365 Copilot |
+|---|---|---|---|---|---|---|---|
+| Meeting transcript → action items | Yes (AI Foundry agents) | Yes | Yes | Yes | Yes | Partial | Yes (recap) |
+| Auto-create tasks on board | Yes (direct to Dataverse) | Yes (Asana, Trello) | Partial (Linear, HubSpot) | Partial (assigns, no board) | No (CRM only) | Theoretically | Partial (manual) |
+| Email/chat signal monitoring | Yes (completion, blocker, escalation) | No | No | No | No | No | No |
+| Auto-move cards from signals | Yes | No | No | No | No | No | No |
+| Built-in Kanban board | Yes | No (pushes to external tools) | No | No | No | Yes (Notion boards) | No (Planner is separate) |
+| Human-in-the-loop approval | Yes (confidence threshold) | No | No | No | No | No | No |
+| Agentic pipeline (multi-agent) | Yes (4 chained agents) | No | No | No | No | Partial (new) | No |
+| Power Platform native | Yes (Dataverse, DLP, Entra) | No | No | No | No | No | Partial |
+| Daily board summaries | Yes (auto-posted to Teams) | No | No | No | No | No | No |
+
+### What Makes FlightDeck Different
+
+1. **Closed-loop agentic pipeline** — Transcript → AI extraction → task creation → signal monitoring → card movement → daily summary. No other product chains multiple autonomous agents in a continuous feedback loop that keeps the board current without human intervention.
+
+2. **Signal monitoring from email and chat** — No competitor scans email and Teams messages to automatically move cards based on detected completion, blocker, progress, or escalation signals. Existing tools are transcript-in, tasks-out only.
+
+3. **Human-in-the-loop with confidence scoring** — Actions above 0.8 confidence are auto-applied; below that threshold, they go to the approval banner for human review. No competitor offers this graduated autonomy model.
+
+4. **Power Platform native** — Built as a Power Apps Code App with Dataverse as the data store. Operates inside the Microsoft governance, DLP, and identity perimeter. Enterprise IT teams get compliance without a third-party SaaS.
+
+5. **Board and intelligence in one app** — Competitors are either meeting assistants that push to external boards (Fireflies → Trello) or boards without meeting intelligence (Planner, Trello, Jira). FlightDeck is both.
+
+### Where Competitors Are Stronger
+
+- **Fireflies / Otter / Grain** — More mature transcription engines, wider language support, larger ecosystems, consumer-friendly pricing
+- **M365 Copilot** — Included with E3/E5 licences, zero deployment, massive user base, deep Teams integration
+- **Notion AI** — Broader productivity platform, consumer appeal, large community, flexible database model
+
+### Open Source
+
+A GitHub search for repositories combining meeting transcripts, AI agents, and Kanban task creation returned **zero results**. The only related repos are small personal projects with zero stars (basic PDF action item extractors). No open-source project attempts what FlightDeck does.
+
+### When FlightDeck Makes Sense
+
+- Organisations already on Microsoft 365 / Power Platform wanting to stay in-ecosystem
+- Teams that lose action items between meetings and email threads
+- Environments requiring DLP policies, Entra ID governance, and audit trails
+- Consultancies and MSPs managing multiple client boards with high meeting volume
+
+### When a Competitor Makes More Sense
+
+- Small teams wanting a free/cheap tool with no deployment (Fireflies, Otter)
+- Organisations already paying for M365 Copilot and happy with manual Planner task creation
+- Teams not on the Microsoft stack (Notion AI for non-Microsoft shops)
+
+---
+
 ## Licence
 
 Proprietary. All rights reserved.
