@@ -6,6 +6,9 @@ The board includes a telemetry blade showing agent activity, analytics dashboard
 
 **Target audience:** UK technology companies, consultancies, and MSPs needing automated meeting-to-action pipelines.
 
+![FlightDeck — Agentic Kanban Board](AgenticBoard.png)
+*FlightDeck running in Power Apps: Kanban board with AI-created tasks, approval banners for low-confidence agent actions, AI Chat assistant, and real-time telemetry showing agent activity and cross-board intelligence alerts.*
+
 ---
 
 ## What It Does
