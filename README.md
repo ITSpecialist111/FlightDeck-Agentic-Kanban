@@ -9,6 +9,8 @@ The board includes a telemetry blade showing agent activity, analytics dashboard
 ![FlightDeck — Agentic Kanban Board](AgenticBoard.png)
 *FlightDeck running in Power Apps: Kanban board with AI-created tasks, approval banners for low-confidence agent actions, AI Chat assistant, and real-time telemetry showing agent activity and cross-board intelligence alerts.*
 
+[**Try the Live Demo**](https://demo-dev.yellowmeadow-084e6936.uksouth.azurecontainerapps.io) — interactive auto-animating demo (no login required)
+
 ---
 
 ## What It Does
